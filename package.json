@@ -1,0 +1,9 @@
+{
+  "name": "mural-economico",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Mural diário com as principais notícias da economia e da bolsa brasileira (B3/Ibovespa), usando apenas fontes públicas e gratuitas.",
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mural Econômico — Brasil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b2018;
+    --bg-deep: #081712;
+    --panel: #12291f;
+    --panel-2: #16311f;
+    --ink: #f2efe4;
+    --ink-dim: #b9c9bd;
+    --gold: #d1a83e;
+    --gold-dim: #8f7a3c;
+    --up: #63b583;
+    --down: #d97a63;
+    --rule: #2a4636;
+    --pin-shadow: rgba(0,0,0,0.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top left, #0e2a1f 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding: 28px 20px 60px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  /* ---- ticker ---- */
+  .ticker-outer{
+    background:var(--bg-deep);
+    border:1px solid var(--rule);
+    border-radius:4px;
+    overflow:hidden;
+    margin-bottom:28px;
+    position:relative;
+  }
+  .ticker-outer::before{
+    content:"AO VIVO";
+    position:absolute; left:0; top:0; bottom:0;
+    display:flex; align-items:center;
+    padding:0 14px;
+    background:var(--gold);
+    color:var(--bg-deep);
+    font:600 11px/1 'IBM Plex Mono',monospace;
+    letter-spacing:0.08em;
+    z-index:2;
+  }
+  .ticker-track{
+    display:flex;
+    gap:48px;
+    white-space:nowrap;
+    padding:12px 0 12px 108px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:14px;
+    animation:scroll 28s linear infinite;
+  }
+  .ticker-outer:hover .ticker-track{animation-play-state:paused;}
+  @keyframes scroll{
+    from{transform:translateX(0);}
+    to{transform:translateX(-50%);}
+  }
+  .tick{color:var(--ink-dim);}
+  .tick b{color:var(--ink); font-weight:500; margin-right:6px;}
+  .tick .up{color:var(--up);}
+  .tick .down{color:var(--down);}
+
+  /* ---- header ---- */
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    border-bottom:1px solid var(--rule);
+    padding-bottom:18px;
+    margin-bottom:30px;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:clamp(32px,5vw,50px);
+    line-height:0.95;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  h1 em{font-style:italic; font-weight:500; color:var(--gold);}
+  .sub{
+    font-family:'Inter',sans-serif;
+    color:var(--ink-dim);
+    font-size:14px;
+    margin-top:8px;
+  }
+  .head-right{text-align:right;}
+  .date-line{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    color:var(--ink-dim);
+    text-transform:capitalize;
+  }
+  button#refreshBtn{
+    margin-top:10px;
+    background:transparent;
+    border:1px solid var(--gold-dim);
+    color:var(--gold);
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:500;
+    padding:8px 16px;
+    border-radius:3px;
+    cursor:pointer;
+    transition:background 0.15s, color 0.15s;
+  }
+  button#refreshBtn:hover{background:var(--gold); color:var(--bg-deep);}
+  button#refreshBtn:disabled{opacity:0.5; cursor:default;}
+
+  /* ---- headline marquee ---- */
+  .headline-bar{
+    background:var(--gold);
+    color:var(--bg-deep);
+    border-radius:4px;
+    margin-bottom:22px;
+    overflow:hidden;
+    position:relative;
+  }
+  .headline-bar::before{
+    content:"MANCHETES";
+    position:absolute; left:0; top:0; bottom:0;
+    display:flex; align-items:center;
+    padding:0 14px;
+    background:var(--bg-deep);
+    color:var(--gold);
+    font:600 11px/1 'IBM Plex Mono',monospace;
+    letter-spacing:0.08em;
+    z-index:2;
+  }
+  .headline-track{
+    display:flex;
+    gap:44px;
+    white-space:nowrap;
+    padding:11px 0 11px 132px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    animation:scroll 24s linear infinite;
+  }
+  .headline-bar:hover .headline-track{animation-play-state:paused;}
+  .headline-track span.h-item::after{content:"•"; margin-left:44px; opacity:0.5; font-weight:400;}
+
+  /* ---- indicators strip ---- */
+  .indicators{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:1px;
+    background:var(--rule);
+    border:1px solid var(--rule);
+    margin-bottom:34px;
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .indicator{
+    background:var(--panel);
+    padding:14px 16px;
+  }
+  .indicator .label{
+    font-size:10.5px;
+    color:var(--ink-dim);
+    font-family:'Inter',sans-serif;
+    margin-bottom:6px;
+  }
+  .indicator .value{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:19px;
+    color:var(--ink);
+  }
+  .indicator .delta{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    margin-top:4px;
+  }
+  .delta.up{color:var(--up);}
+  .delta.down{color:var(--down);}
+
+  /* ---- weekday recap ---- */
+  .week-section{
+    margin-top:46px;
+    border-top:1px solid var(--rule);
+    padding-top:26px;
+  }
+  .week-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .week-head h3{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:22px;
+    margin:0;
+  }
+  .week-head .sub{margin:0; font-size:13px;}
+  .weekday-tabs{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+  .weekday-tabs button{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    background:var(--panel);
+    border:1px solid var(--rule);
+    color:var(--ink-dim);
+    padding:8px 14px;
+    border-radius:3px;
+    cursor:pointer;
+    transition:all 0.15s;
+  }
+  .weekday-tabs button:hover{border-color:var(--gold-dim); color:var(--ink);}
+  .weekday-tabs button.active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:var(--bg-deep);
+    font-weight:500;
+  }
+  .day-panel{
+    background:var(--panel);
+    border:1px solid var(--rule);
+    border-radius:4px;
+    padding:6px 20px;
+  }
+  .day-item{
+    display:flex;
+    gap:14px;
+    align-items:baseline;
+    padding:15px 0;
+    border-bottom:1px solid var(--rule);
+  }
+  .day-item:last-child{border-bottom:none;}
+  .day-item .dot{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--gold);
+    flex:0 0 auto;
+    margin-top:7px;
+  }
+  .day-item .txt h4{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:16px;
+    margin:0 0 4px;
+    line-height:1.3;
+  }
+  .day-item .txt h4 a{color:inherit; text-decoration:none;}
+  .day-item .txt h4 a:hover{text-decoration:underline;}
+  .day-item .txt .src{
+    font-size:12px;
+    color:var(--gold-dim);
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .day-panel .state-box{padding:34px 20px;}
+
+  /* ---- mural board ---- */
+  .board{
+    position:relative;
+    display:grid;
+    grid-template-columns:1.4fr 1fr;
+    gap:22px;
+  }
+  @media (max-width:760px){ .board{grid-template-columns:1fr;} }
+
+  .col{display:flex; flex-direction:column; gap:22px;}
+
+  .card{
+    background:var(--panel-2);
+    border:1px solid var(--rule);
+    border-radius:2px;
+    padding:22px 22px 20px;
+    position:relative;
+    box-shadow:0 10px 24px var(--pin-shadow);
+  }
+  .card.featured{padding:28px 28px 24px;}
+  .card::before{
+    content:"";
+    position:absolute;
+    top:-7px; left:26px;
+    width:14px; height:14px;
+    border-radius:50%;
+    background:var(--gold);
+    box-shadow:0 3px 5px rgba(0,0,0,0.4);
+  }
+  .card:nth-child(3n+2)::before{left:auto; right:26px;}
+  .card .tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--gold);
+    letter-spacing:0.03em;
+    margin-bottom:10px;
+    display:inline-block;
+  }
+  .card h2{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:22px;
+    line-height:1.2;
+    margin:0 0 10px;
+  }
+  .card h2 a{color:inherit; text-decoration:none;}
+  .card h2 a:hover{text-decoration:underline;}
+  .card.featured h2{font-size:30px;}
+  .card p{
+    font-size:14.5px;
+    line-height:1.55;
+    color:var(--ink-dim);
+    margin:0 0 12px;
+  }
+  .card .src{
+    font-size:12px;
+    color:var(--gold-dim);
+    font-family:'IBM Plex Mono',monospace;
+  }
+
+  .state-box{
+    text-align:center;
+    padding:70px 20px;
+    color:var(--ink-dim);
+    font-family:'Inter',sans-serif;
+  }
+  .state-box .spin{
+    width:26px;height:26px;
+    border:2px solid var(--rule);
+    border-top-color:var(--gold);
+    border-radius:50%;
+    margin:0 auto 16px;
+    animation:spin 0.9s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .state-box.error{color:var(--down);}
+  .state-box button{
+    margin-top:14px;
+    background:var(--gold);
+    color:var(--bg-deep);
+    border:none;
+    padding:8px 18px;
+    border-radius:3px;
+    font-weight:600;
+    cursor:pointer;
+  }
+
+  footer{
+    margin-top:40px;
+    padding-top:16px;
+    border-top:1px solid var(--rule);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+    font-size:12px;
+    color:var(--ink-dim);
+    font-family:'IBM Plex Mono',monospace;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="ticker-outer">
+    <div class="ticker-track" id="tickerTrack">
+      <span class="tick">carregando cotações…</span>
+    </div>
+  </div>
+
+  <div class="headline-bar">
+    <div class="headline-track" id="headlineTrack">
+      <span class="h-item">carregando manchetes do dia…</span>
+    </div>
+  </div>
+
+  <header>
+    <div>
+      <h1>Mural <em>Econômico</em></h1>
+      <div class="sub">Painel diário do cenário econômico e da bolsa brasileira — fontes 100% gratuitas</div>
+    </div>
+    <div class="head-right">
+      <div class="date-line" id="dateLine"></div>
+      <button id="refreshBtn" onclick="loadData()">Atualizar agora</button>
+    </div>
+  </header>
+
+  <div class="indicators" id="indicators" style="display:none;"></div>
+
+  <div id="content">
+    <div class="state-box">
+      <div class="spin"></div>
+      Buscando as notícias de hoje…
+    </div>
+  </div>
+
+  <div class="week-section">
+    <div class="week-head">
+      <h3>Resumo da semana</h3>
+      <p class="sub">Últimos dias com notícias disponíveis nos feeds</p>
+    </div>
+    <div class="weekday-tabs" id="weekdayTabs"></div>
+    <div class="day-panel" id="dayPanel">
+      <div class="state-box">Carregando…</div>
+    </div>
+  </div>
+
+  <footer>
+    <span id="updatedAt">—</span>
+    <span>Fontes: Yahoo Finance, Banco Central (SGS) e feeds RSS públicos · confira sempre a fonte original</span>
+  </footer>
+
+</div>
+
+<script>
+const dateLine = document.getElementById('dateLine');
+dateLine.textContent = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+function fmtPct(v){
+  const n = Number(v);
+  if (Number.isNaN(n)) return '';
+  const sign = n > 0 ? '+' : '';
+  return `${sign}${n.toFixed(2)}%`;
+}
+
+function deltaClass(v){
+  const n = Number(v);
+  if (Number.isNaN(n)) return '';
+  return n >= 0 ? 'up' : 'down';
+}
+
+function renderIndicators(data){
+  const box = document.getElementById('indicators');
+  const items = [
+    { label:'Ibovespa', v: data.ibovespa },
+    { label:'Dólar (USD/BRL)', v: data.dolar },
+    { label:'Euro (EUR/BRL)', v: data.euro },
+    { label:'Selic', v: data.selic, noDelta:true },
+    { label:'IPCA (12m)', v: data.ipca, noDelta:true },
+  ].filter(i => i.v && i.v.value !== undefined && i.v.value !== null);
+
+  if (!items.length){ box.style.display='none'; return; }
+
+  box.innerHTML = items.map(i => `
+    <div class="indicator">
+      <div class="label">${i.label}</div>
+      <div class="value">${i.v.value}</div>
+      ${(!i.noDelta && i.v.change_pct !== undefined && i.v.change_pct !== null)
+        ? `<div class="delta ${deltaClass(i.v.change_pct)}">${fmtPct(i.v.change_pct)}</div>`
+        : ''}
+    </div>
+  `).join('');
+  box.style.display = 'grid';
+}
+
+function renderTicker(data){
+  const track = document.getElementById('tickerTrack');
+  const items = [
+    { label:'IBOV', v: data.ibovespa },
+    { label:'USD/BRL', v: data.dolar },
+    { label:'EUR/BRL', v: data.euro },
+    { label:'SELIC', v: data.selic },
+  ].filter(i => i.v && i.v.value !== undefined && i.v.value !== null);
+
+  if (!items.length){ track.innerHTML = '<span class="tick">cotações indisponíveis no momento</span>'; return; }
+
+  const pieces = items.map(i => {
+    const cls = (i.v.change_pct !== undefined && i.v.change_pct !== null) ? deltaClass(i.v.change_pct) : '';
+    const pct = (i.v.change_pct !== undefined && i.v.change_pct !== null) ? ` <span class="${cls}">${fmtPct(i.v.change_pct)}</span>` : '';
+    return `<span class="tick"><b>${i.label}</b>${i.v.value}${pct}</span>`;
+  });
+  track.innerHTML = pieces.join('') + pieces.join('');
+}
+
+function renderHeadlines(list){
+  const track = document.getElementById('headlineTrack');
+  if (!list || !list.length){
+    track.innerHTML = '<span class="h-item">sem manchetes no momento</span>';
+    return;
+  }
+  const top = list.slice(0, 4).map(n => `<span class="h-item">${n.title || ''}</span>`);
+  track.innerHTML = top.join('') + top.join('');
+}
+
+function esc(str){
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderNews(list){
+  const content = document.getElementById('content');
+  if (!list || !list.length){
+    content.innerHTML = `<div class="state-box error">Não foi possível montar o mural agora.<br><button onclick="loadData()">Tentar de novo</button></div>`;
+    return;
+  }
+
+  const featured = list[0];
+  const rest = list.slice(1);
+  const mid = Math.ceil(rest.length/2);
+  const colA = rest.slice(0, mid);
+  const colB = rest.slice(mid);
+
+  const titleHTML = (n) => n.url
+    ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${n.title || ''}</a>`
+    : (n.title || '');
+
+  const cardHTML = (n, big=false) => `
+    <div class="card ${big?'featured':''}">
+      <span class="tag">${(n.category||'ECONOMIA').toUpperCase()}</span>
+      <h2>${titleHTML(n)}</h2>
+      <p>${n.summary || ''}</p>
+      <span class="src">${n.source || ''}</span>
+    </div>
+  `;
+
+  content.innerHTML = `
+    <div class="board">
+      <div class="col">
+        ${cardHTML(featured, true)}
+        ${colA.map(n => cardHTML(n)).join('')}
+      </div>
+      <div class="col">
+        ${colB.map(n => cardHTML(n)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ---- comunicação com o backend (/api/*) ----
+async function fetchJSON(url){
+  let res;
+  try{
+    res = await fetch(url);
+  }catch(networkErr){
+    throw new Error('Falha de rede ao contatar o servidor: ' + networkErr.message);
+  }
+  let data = {};
+  try{ data = await res.json(); }catch(e){}
+  if (!res.ok){
+    throw new Error(data.error || `Erro ${res.status} ao consultar ${url}`);
+  }
+  return data;
+}
+
+async function withRetry(fn, attempts){
+  attempts = attempts || 2;
+  let lastErr;
+  for (let i = 0; i < attempts; i++){
+    try{ return await fn(); }
+    catch(e){ lastErr = e; console.warn(`Tentativa ${i+1} falhou:`, e.message); }
+  }
+  throw lastErr;
+}
+
+let allItems = [];
+const weekdayShort = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+
+function dateKeyOf(iso){
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+async function loadData(){
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  document.getElementById('content').innerHTML = `
+    <div class="state-box"><div class="spin"></div>Buscando as notícias de hoje…</div>
+  `;
+
+  try{
+    const [marketData, newsData] = await Promise.all([
+      withRetry(() => fetchJSON('/api/market')),
+      withRetry(() => fetchJSON('/api/news'))
+    ]);
+
+    allItems = newsData.items || [];
+    const todayNews = allItems.slice(0, 6);
+
+    renderIndicators(marketData);
+    renderTicker(marketData);
+    renderHeadlines(todayNews);
+    renderNews(todayNews);
+    document.getElementById('updatedAt').textContent = 'Atualizado em ' + new Date().toLocaleString('pt-BR');
+    initWeekTabs();
+  }catch(err){
+    console.error(err);
+    document.getElementById('content').innerHTML = `
+      <div class="state-box error">Não foi possível carregar o mural agora.<br>${err.message || ''}<br><button onclick="loadData()">Tentar de novo</button></div>
+    `;
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function initWeekTabs(){
+  const tabsBox = document.getElementById('weekdayTabs');
+  const panel = document.getElementById('dayPanel');
+
+  if (!allItems.length){
+    tabsBox.innerHTML = '';
+    panel.innerHTML = `<div class="state-box">Sem dados suficientes para montar o resumo da semana.</div>`;
+    return;
+  }
+
+  const todayKey = dateKeyOf(new Date().toISOString());
+
+  // agrupa por dia (a lista já vem ordenada da mais recente para a mais antiga)
+  const groups = {};
+  for (const it of allItems){
+    const key = dateKeyOf(it.pubDate);
+    if (!groups[key]) groups[key] = [];
+    if (groups[key].length < 6) groups[key].push(it);
+  }
+
+  const keys = Object.keys(groups).sort((a,b) => b.localeCompare(a)).slice(0, 5).reverse();
+
+  tabsBox.innerHTML = keys.map(key => {
+    const d = new Date(key + 'T12:00:00');
+    const label = key === todayKey ? 'Hoje' : `${['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()]} ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+    return `<button data-key="${key}">${label}</button>`;
+  }).join('');
+
+  tabsBox.querySelectorAll('button').forEach((btn, idx) => {
+    btn.addEventListener('click', () => selectDay(keys[idx], groups, tabsBox, btn));
+  });
+
+  const lastBtn = tabsBox.querySelector('button:last-child');
+  const lastKey = keys[keys.length - 1];
+  if (lastBtn && lastKey) selectDay(lastKey, groups, tabsBox, lastBtn);
+}
+
+function selectDay(key, groups, tabsBox, btn){
+  tabsBox.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = document.getElementById('dayPanel');
+  const items = groups[key] || [];
+
+  if (!items.length){
+    panel.innerHTML = `<div class="state-box">Nenhuma notícia arquivada para este dia.</div>`;
+    return;
+  }
+
+  panel.innerHTML = items.map(n => `
+    <div class="day-item">
+      <div class="dot"></div>
+      <div class="txt">
+        <h4>${n.url ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${n.title || ''}</a>` : (n.title || '')}</h4>
+        <span class="src">${n.source || ''}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+loadData();
+</script>
+</body>
+</html>
