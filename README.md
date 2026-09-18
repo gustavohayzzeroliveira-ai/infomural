@@ -14,6 +14,20 @@ gratuitas.
 - **Commodities & cripto**: Petróleo Brent, Petróleo WTI, Ouro, Bitcoin
 - **Manchetes do dia** e **resumo da semana**, combinando veículos brasileiros e
   internacionais
+- **Ações — acompanhar de perto**: busque qualquer ação da B3 ou dos EUA (ex: PETR4,
+  Vale, Apple, Tesla) e clique para adicionar à sua lista. Cada ação acompanhada mostra
+  preço, variação do dia, faixa de 52 semanas e volume negociado.
+
+### Sobre a lista de ações (watchlist)
+
+A lista fica salva **só no navegador** (via `localStorage`), sem conta e sem servidor —
+foi a opção escolhida para manter o projeto simples e 100% gratuito. Isso significa:
+
+- Funciona sem login, é instantâneo.
+- Fica só nesse navegador/dispositivo — se você limpar os dados do navegador ou abrir em
+  outro aparelho, a lista não aparece lá.
+- Se um dia você quiser sincronizar entre dispositivos, dá para trocar para um banco de
+  dados gratuito (ex: Vercel KV) — é só avisar que eu monto essa versão.
 
 ## Fontes de dados
 
@@ -33,6 +47,10 @@ Nenhuma dessas fontes exige cadastro, chave de API ou pagamento.
   globais, câmbio/juros internacionais, commodities e cripto).
 - `api/news.js` — função serverless: busca e combina os feeds RSS (BR + mundo), remove
   duplicados, categoriza por palavra-chave e ordena por data.
+- `api/search.js` — função serverless: busca ações por nome/ticker (B3 e EUA) via Yahoo
+  Finance, para o campo de busca de "Ações".
+- `api/quote.js` — função serverless: cotação detalhada (preço, variação, faixa de 52
+  semanas, volume) para as ações da sua watchlist.
 - `lib/rss.js` — parser simples de RSS/Atom (sem dependências externas).
 - `lib/fetch-timeout.js` — helper para não travar se alguma fonte demorar.
 

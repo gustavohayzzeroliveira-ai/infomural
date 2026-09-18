@@ -287,6 +287,92 @@
   }
   .day-panel .state-box{padding:34px 20px;}
 
+  /* ---- ações / watchlist ---- */
+  .stocks-section{ margin-bottom:40px; }
+  .stocks-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:14px;
+    margin-bottom:16px;
+  }
+  .stocks-head h3{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:22px;
+    margin:0;
+  }
+  .stock-search-box{ position:relative; width:340px; max-width:100%; }
+  .stock-search-box input{
+    width:100%;
+    background:var(--panel);
+    border:1px solid var(--rule);
+    color:var(--ink);
+    padding:10px 14px;
+    border-radius:4px;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    outline:none;
+  }
+  .stock-search-box input::placeholder{ color:var(--ink-dim); }
+  .stock-search-box input:focus{ border-color:var(--orange); }
+  .stock-search-results{
+    display:none;
+    position:absolute;
+    top:calc(100% + 4px);
+    left:0; right:0;
+    background:var(--panel-2);
+    border:1px solid var(--rule);
+    border-radius:4px;
+    max-height:280px;
+    overflow-y:auto;
+    z-index:10;
+    box-shadow:0 12px 28px rgba(0,0,0,0.6);
+  }
+  .sr-item{
+    display:flex;
+    gap:10px;
+    align-items:baseline;
+    padding:10px 14px;
+    cursor:pointer;
+    border-bottom:1px solid var(--rule);
+  }
+  .sr-item:last-child{ border-bottom:none; }
+  .sr-item:hover{ background:var(--panel); }
+  .sr-symbol{ font-family:'IBM Plex Mono',monospace; color:var(--orange); font-size:13px; font-weight:600; white-space:nowrap; }
+  .sr-name{ font-size:13px; color:var(--ink); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sr-exchange{ font-size:11px; color:var(--ink-dim); white-space:nowrap; }
+  .sr-loading, .sr-empty{ padding:14px; font-size:13px; color:var(--ink-dim); }
+
+  .watchlist-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+    gap:14px;
+  }
+  .stock-card{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--rule);
+    border-radius:4px;
+    padding:16px;
+  }
+  .stock-remove{
+    position:absolute; top:6px; right:6px;
+    background:transparent; border:none; color:var(--ink-dim);
+    font-size:17px; line-height:1; cursor:pointer; padding:3px 7px; border-radius:3px;
+  }
+  .stock-remove:hover{ color:var(--down); background:rgba(226,84,58,0.15); }
+  .stock-symbol{ font-family:'IBM Plex Mono',monospace; color:var(--orange); font-size:14px; font-weight:600; margin-bottom:2px; padding-right:20px; }
+  .stock-name{
+    font-size:12px; color:var(--ink-dim); margin-bottom:10px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .stock-price{ font-family:'IBM Plex Mono',monospace; font-size:20px; color:var(--ink); }
+  .stock-delta{ font-family:'IBM Plex Mono',monospace; font-size:13px; margin-top:2px; margin-bottom:10px; }
+  .stock-range, .stock-volume{ font-size:11px; color:var(--ink-dim); font-family:'IBM Plex Mono',monospace; margin-top:2px; }
+  .stock-unavailable{ font-size:12px; color:var(--down); margin-top:8px; }
+
   /* ---- mural board ---- */
   .board-title{
     font-family:'Fraunces',serif;
@@ -416,11 +502,24 @@
     </div>
     <div class="head-right">
       <div class="date-line" id="dateLine"></div>
-      <button id="refreshBtn" onclick="loadData()">Atualizar agora</button>
+      <button id="refreshBtn" onclick="loadData(); refreshWatchlistQuotes();">Atualizar agora</button>
     </div>
   </header>
 
   <div class="panels" id="panels"></div>
+
+  <div class="stocks-section">
+    <div class="stocks-head">
+      <h3>Ações — acompanhar de perto</h3>
+      <div class="stock-search-box">
+        <input type="text" id="stockSearchInput" placeholder="Buscar ação (ex: PETR4, Vale, Apple, Tesla)…" autocomplete="off">
+        <div class="stock-search-results" id="stockSearchResults"></div>
+      </div>
+    </div>
+    <div class="watchlist" id="watchlist">
+      <div class="state-box">Nenhuma ação na sua lista ainda. Busque acima para adicionar.</div>
+    </div>
+  </div>
 
   <h3 class="board-title">Manchetes de hoje</h3>
   <div id="content">
@@ -719,6 +818,172 @@ function selectDay(key, groups, tabsBox, btn){
 }
 
 loadData();
+refreshWatchlistQuotes();
+
+// ============================================================
+// Ações — busca e watchlist (salva só neste navegador, localStorage)
+// ============================================================
+const WATCHLIST_KEY = 'mural_watchlist_v1';
+
+function loadWatchlist(){
+  try{
+    const raw = localStorage.getItem(WATCHLIST_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){
+    console.warn('Não foi possível ler a watchlist do localStorage:', e);
+    return [];
+  }
+}
+
+function saveWatchlist(list){
+  try{
+    localStorage.setItem(WATCHLIST_KEY, JSON.stringify(list));
+  }catch(e){
+    console.warn('Não foi possível salvar a watchlist no localStorage:', e);
+  }
+}
+
+function debounce(fn, ms){
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+
+function fmtStockPrice(price, currency){
+  if (price === null || price === undefined) return '—';
+  const prefix = currency === 'BRL' ? 'R$ ' : currency === 'USD' ? 'US$ ' : (currency ? currency + ' ' : '');
+  return prefix + price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtVolume(v){
+  if (v === null || v === undefined) return '—';
+  if (v >= 1e9) return (v/1e9).toFixed(1).replace('.', ',') + 'B';
+  if (v >= 1e6) return (v/1e6).toFixed(1).replace('.', ',') + 'M';
+  if (v >= 1e3) return (v/1e3).toFixed(1).replace('.', ',') + 'K';
+  return String(v);
+}
+
+function addToWatchlist(symbol, name, exchange){
+  const list = loadWatchlist();
+  if (list.some(s => s.symbol === symbol)) return;
+  list.push({ symbol, name, exchange });
+  saveWatchlist(list);
+  refreshWatchlistQuotes();
+}
+
+function removeFromWatchlist(symbol){
+  const list = loadWatchlist().filter(s => s.symbol !== symbol);
+  saveWatchlist(list);
+  refreshWatchlistQuotes();
+}
+
+async function refreshWatchlistQuotes(){
+  const box = document.getElementById('watchlist');
+  const list = loadWatchlist();
+
+  if (!list.length){
+    box.innerHTML = `<div class="state-box">Nenhuma ação na sua lista ainda. Busque acima para adicionar.</div>`;
+    return;
+  }
+
+  box.innerHTML = `<div class="state-box"><div class="spin"></div>Atualizando cotações…</div>`;
+
+  try{
+    const symbols = list.map(s => s.symbol).join(',');
+    const data = await withRetry(() => fetchJSON(`/api/quote?symbols=${encodeURIComponent(symbols)}`));
+    renderWatchlist(list, data.quotes || {});
+  }catch(err){
+    console.error(err);
+    box.innerHTML = `<div class="state-box error">Não foi possível atualizar as cotações.<br>${err.message || ''}<br><button onclick="refreshWatchlistQuotes()">Tentar de novo</button></div>`;
+  }
+}
+
+function renderWatchlist(list, quotes){
+  const box = document.getElementById('watchlist');
+
+  box.innerHTML = `<div class="watchlist-grid">` + list.map(item => {
+    const q = quotes[item.symbol];
+
+    if (!q){
+      return `
+        <div class="stock-card">
+          <button class="stock-remove" onclick="removeFromWatchlist('${esc(item.symbol)}')" title="Remover">×</button>
+          <div class="stock-symbol">${esc(item.symbol)}</div>
+          <div class="stock-name">${esc(item.name)}</div>
+          <div class="stock-unavailable">cotação indisponível no momento</div>
+        </div>
+      `;
+    }
+
+    const cls = deltaClass(q.change_pct);
+    return `
+      <div class="stock-card">
+        <button class="stock-remove" onclick="removeFromWatchlist('${esc(item.symbol)}')" title="Remover">×</button>
+        <div class="stock-symbol">${esc(q.symbol)}</div>
+        <div class="stock-name">${esc(q.name)}</div>
+        <div class="stock-price">${fmtStockPrice(q.price, q.currency)}</div>
+        <div class="stock-delta ${cls}">${fmtPct(q.change_pct)}</div>
+        <div class="stock-range">52s: ${fmtStockPrice(q.week52_low, q.currency)} – ${fmtStockPrice(q.week52_high, q.currency)}</div>
+        <div class="stock-volume">Vol: ${fmtVolume(q.volume)}</div>
+      </div>
+    `;
+  }).join('') + `</div>`;
+}
+
+// ---- busca de ações ----
+const stockSearchInput = document.getElementById('stockSearchInput');
+const stockSearchResults = document.getElementById('stockSearchResults');
+
+const runStockSearch = debounce(async (query) => {
+  if (!query || query.length < 2){
+    stockSearchResults.style.display = 'none';
+    stockSearchResults.innerHTML = '';
+    return;
+  }
+
+  stockSearchResults.innerHTML = `<div class="sr-loading">Buscando…</div>`;
+  stockSearchResults.style.display = 'block';
+
+  try{
+    const data = await fetchJSON(`/api/search?q=${encodeURIComponent(query)}`);
+    const results = data.results || [];
+
+    if (!results.length){
+      stockSearchResults.innerHTML = `<div class="sr-empty">Nenhum resultado para "${esc(query)}".</div>`;
+      return;
+    }
+
+    stockSearchResults.innerHTML = results.map(r => `
+      <div class="sr-item" data-symbol="${esc(r.symbol)}" data-name="${esc(r.name)}" data-exchange="${esc(r.exchange)}">
+        <span class="sr-symbol">${esc(r.symbol)}</span>
+        <span class="sr-name">${esc(r.name)}</span>
+        <span class="sr-exchange">${esc(r.exchange)}</span>
+      </div>
+    `).join('');
+
+    stockSearchResults.querySelectorAll('.sr-item').forEach(el => {
+      el.addEventListener('click', () => {
+        addToWatchlist(el.dataset.symbol, el.dataset.name, el.dataset.exchange);
+        stockSearchResults.style.display = 'none';
+        stockSearchInput.value = '';
+      });
+    });
+  }catch(err){
+    console.error(err);
+    stockSearchResults.innerHTML = `<div class="sr-empty">Erro na busca: ${esc(err.message || '')}</div>`;
+  }
+}, 350);
+
+stockSearchInput.addEventListener('input', (e) => runStockSearch(e.target.value.trim()));
+stockSearchInput.addEventListener('focus', (e) => {
+  if (stockSearchResults.innerHTML.trim()) stockSearchResults.style.display = 'block';
+});
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.stock-search-box')) stockSearchResults.style.display = 'none';
+});
 </script>
+
 </body>
 </html>
