@@ -1,18 +1,36 @@
 // api/market.js — GET /api/market
-// Cotações via Yahoo Finance (endpoint público não-oficial, sem chave) e
-// Selic/IPCA via API oficial e gratuita do Banco Central do Brasil (SGS).
+// Painel completo para o investidor: Brasil + mundo, via fontes públicas e gratuitas.
+// Cotações: Yahoo Finance (endpoint público não-oficial, sem chave).
+// Selic / IPCA / IGP-M: API oficial e gratuita do Banco Central (SGS).
 const { fetchWithTimeout } = require("../lib/fetch-timeout");
 
 const YAHOO_SYMBOLS = {
+  // Brasil
   ibovespa: "^BVSP",
   dolar: "BRL=X",
   euro: "EURBRL=X",
+  // Bolsas globais
+  sp500: "^GSPC",
+  nasdaq: "^IXIC",
+  dow: "^DJI",
+  dax: "^GDAXI",
+  nikkei: "^N225",
+  hangseng: "^HSI",
+  // Câmbio & juros internacionais
+  treasury10y: "^TNX", // Yahoo retorna o rendimento x10 (ex.: 42.5 = 4,25%)
+  dxy: "DX-Y.NYB",
+  // Commodities & cripto
+  brent: "BZ=F",
+  wti: "CL=F",
+  ouro: "GC=F",
+  bitcoin: "BTC-USD",
 };
 
 // Séries do SGS/BCB: https://www3.bcb.gov.br/sgspub
 const BCB_SERIES = {
-  selic: 432,   // Meta Selic definida pelo Copom (% a.a.)
-  ipca: 13522,  // IPCA acumulado em 12 meses (%)
+  selic: 432,  // Meta Selic definida pelo Copom (% a.a.)
+  ipca: 13522, // IPCA acumulado em 12 meses (%)
+  igpm: 189,   // IGP-M, FGV, variação % no mês
 };
 
 async function fetchYahoo(symbol) {
@@ -43,44 +61,79 @@ async function fetchBcbSeries(code) {
 }
 
 const fmtIndex = (n) => n.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
-const fmtCurrency = (n) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtNum2 = (n) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtCurrencyUSD = (n) => "US$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtUSDInt = (n) => "US$ " + n.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 const fmtPct = (n) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
 
 module.exports = async (req, res) => {
   // Cache de 15min na CDN do Vercel.
   res.setHeader("Cache-Control", "s-maxage=900, stale-while-revalidate=300");
 
-  const [ibov, usd, eur, selic, ipca] = await Promise.allSettled([
-    fetchYahoo(YAHOO_SYMBOLS.ibovespa),
-    fetchYahoo(YAHOO_SYMBOLS.dolar),
-    fetchYahoo(YAHOO_SYMBOLS.euro),
-    fetchBcbSeries(BCB_SERIES.selic),
-    fetchBcbSeries(BCB_SERIES.ipca),
+  const symbolKeys = Object.keys(YAHOO_SYMBOLS);
+  const bcbKeys = Object.keys(BCB_SERIES);
+
+  const [yahooResults, bcbResults] = await Promise.all([
+    Promise.allSettled(symbolKeys.map((k) => fetchYahoo(YAHOO_SYMBOLS[k]))),
+    Promise.allSettled(bcbKeys.map((k) => fetchBcbSeries(BCB_SERIES[k]))),
   ]);
 
-  const data = {};
+  const raw = {};
   const warnings = [];
 
-  if (ibov.status === "fulfilled") data.ibovespa = { value: fmtIndex(ibov.value.price), change_pct: ibov.value.changePct };
-  else warnings.push("Ibovespa: " + ibov.reason.message);
+  yahooResults.forEach((r, i) => {
+    const key = symbolKeys[i];
+    if (r.status === "fulfilled") raw[key] = r.value;
+    else warnings.push(`${key}: ${r.reason.message}`);
+  });
 
-  if (usd.status === "fulfilled") data.dolar = { value: fmtCurrency(usd.value.price), change_pct: usd.value.changePct };
-  else warnings.push("Dólar: " + usd.reason.message);
+  bcbResults.forEach((r, i) => {
+    const key = bcbKeys[i];
+    if (r.status === "fulfilled") raw[key] = { price: r.value };
+    else warnings.push(`${key}: ${r.reason.message}`);
+  });
 
-  if (eur.status === "fulfilled") data.euro = { value: fmtCurrency(eur.value.price), change_pct: eur.value.changePct };
-  else warnings.push("Euro: " + eur.reason.message);
+  const ind = (key, fmt) =>
+    raw[key] ? { value: fmt(raw[key].price), change_pct: raw[key].changePct != null ? raw[key].changePct : null } : null;
 
-  if (selic.status === "fulfilled") data.selic = { value: fmtPct(selic.value) };
-  else warnings.push("Selic: " + selic.reason.message);
+  const data = {
+    brasil: {
+      ibovespa: ind("ibovespa", fmtIndex),
+      dolar: ind("dolar", fmtNum2),
+      euro: ind("euro", fmtNum2),
+      selic: raw.selic ? { value: fmtPct(raw.selic.price) } : null,
+      ipca: raw.ipca ? { value: fmtPct(raw.ipca.price) } : null,
+      igpm: raw.igpm ? { value: fmtPct(raw.igpm.price) } : null,
+    },
+    global: {
+      sp500: ind("sp500", fmtIndex),
+      nasdaq: ind("nasdaq", fmtIndex),
+      dow: ind("dow", fmtIndex),
+      dax: ind("dax", fmtIndex),
+      nikkei: ind("nikkei", fmtIndex),
+      hangseng: ind("hangseng", fmtIndex),
+    },
+    cambio_juros: {
+      treasury10y: raw.treasury10y
+        ? { value: fmtPct(raw.treasury10y.price / 10), change_pct: raw.treasury10y.changePct }
+        : null,
+      dxy: ind("dxy", fmtNum2),
+    },
+    commodities: {
+      brent: ind("brent", fmtCurrencyUSD),
+      wti: ind("wti", fmtCurrencyUSD),
+      ouro: ind("ouro", fmtCurrencyUSD),
+      bitcoin: ind("bitcoin", fmtUSDInt),
+    },
+    warnings,
+  };
 
-  if (ipca.status === "fulfilled") data.ipca = { value: fmtPct(ipca.value) };
-  else warnings.push("IPCA: " + ipca.reason.message);
+  const hasAny = Object.values(data.brasil).concat(Object.values(data.global), Object.values(data.cambio_juros), Object.values(data.commodities)).some(Boolean);
 
-  if (!Object.keys(data).length) {
+  if (!hasAny) {
     res.status(502).json({ error: "Nenhuma fonte de cotações respondeu no momento.", warnings });
     return;
   }
 
-  data.warnings = warnings;
   res.status(200).json(data);
 };
